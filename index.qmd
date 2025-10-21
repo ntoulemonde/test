@@ -2,6 +2,11 @@
 title: "quarto_test"
 ---
 
-This is a Quarto website `{r} date()`.
+This is a Quarto website 
+```{r}
+#| echo: true
+
+date()
+```
 
 To learn more about Quarto websites visit <https://quarto.org/docs/websites>.

@@ -24,4 +24,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
-      - run: echo $QUARTO_OUTPUT
+      - run: echo ${{ env.QUARTO_OUTPUT }}
