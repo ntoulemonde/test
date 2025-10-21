@@ -38,11 +38,7 @@ jobs:
         # env: # For Quarto profiles
         #   QUARTO_PROFILE: preview
 
-      # - name: Check out repository
-      #   uses: actions/checkout@v5
-      #   # with:
-      #   #   ref: ${{ github.event.pull_request.head.ref }}  # Reference of the commit to checkout to. To ensure it's the one of the PR
-      #   #   repository: ${{github.event.pull_request.head.repo.full_name}}
+
       - name: Deploy preview
         id: deploy-preview
         uses: rossjrw/pr-preview-action@v1.6.2
@@ -50,5 +46,37 @@ jobs:
           source-dir: ./_site/
           preview-branch: gh-pages
       
+      - name: Fetch comments  # To see if a comment has previously been posted
+        id: fetch-comments
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            // Find the comment with the body containing "✅ Preview site is ready:"
+            const previewSiteReadyComment = comments.find(comment => comment.body.includes('🚀 View preview at'));
+
+            // Set the output
+            if (previewSiteReadyComment) {
+              core.setOutput('commentId', previewSiteReadyComment.id);
+            } else {
+              core.setOutput('commentId', '');
+            }
+
+        - name: Delete existing comment if exists
+          if: steps.fetch-comments.outputs.commentId != ''
+          uses: actions/github-script@v6
+          with:
+            script: |
+              await github.rest.issues.deleteComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: ${{ steps.fetch-comments.outputs.commentId }},
+              });
+
       - name: Comment PR
         run: echo "Preview visible at ${{ steps.deploy-preview.outputs.preview-url }}"
