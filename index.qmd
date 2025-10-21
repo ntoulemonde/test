@@ -2,6 +2,6 @@
 title: "quarto_test"
 ---
 
-This is a Quarto website.
+This is a Quarto website `{r} date()`.
 
 To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
