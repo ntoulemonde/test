@@ -66,16 +66,6 @@ jobs:
               core.setOutput('commentId', '');
             }
 
-      - name: Delete existing comment if exists
-        if: steps.fetch-comments.outputs.commentId != ''
-        uses: actions/github-script@v6
-        with:
-          script: |
-            await github.rest.issues.deleteComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: ${{ steps.fetch-comments.outputs.commentId }},
-            });
-
       - name: Comment PR
+        if: steps.fetch-comments.outputs.commentId == ''
         run: echo "Preview visible at ${{ steps.deploy-preview.outputs.preview-url }}"
