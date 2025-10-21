@@ -38,14 +38,13 @@ jobs:
         # env: # For Quarto profiles
         #   QUARTO_PROFILE: preview
 
-
       - name: Deploy preview
         id: deploy-preview
         uses: rossjrw/pr-preview-action@v1.6.2
         with:
           source-dir: ./_site/
           preview-branch: gh-pages
-      
+
       - name: Fetch comments  # To see if a comment has previously been posted
         id: fetch-comments
         uses: actions/github-script@v6
@@ -67,16 +66,16 @@ jobs:
               core.setOutput('commentId', '');
             }
 
-        - name: Delete existing comment if exists
-          if: steps.fetch-comments.outputs.commentId != ''
-          uses: actions/github-script@v6
-          with:
-            script: |
-              await github.rest.issues.deleteComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: ${{ steps.fetch-comments.outputs.commentId }},
-              });
+      - name: Delete existing comment if exists
+        if: steps.fetch-comments.outputs.commentId != ''
+        uses: actions/github-script@v6
+        with:
+          script: |
+            await github.rest.issues.deleteComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: ${{ steps.fetch-comments.outputs.commentId }},
+            });
 
       - name: Comment PR
         run: echo "Preview visible at ${{ steps.deploy-preview.outputs.preview-url }}"
