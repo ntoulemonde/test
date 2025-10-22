@@ -4,4 +4,7 @@ title: "quarto_test"
 
 This is a Quarto website E.
 
-To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
+Links : 
+
+- <https://www.github.com/ntoulemonde/test>
+- <https://github.com/ntoulemonde/test/tree/gh-pages>
