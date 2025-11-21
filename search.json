@@ -1,10 +1,10 @@
 [
   {
-    "objectID": "about.html",
-    "href": "about.html",
-    "title": "About",
+    "objectID": "manip.html",
+    "href": "manip.html",
+    "title": "quarto_test",
     "section": "",
-    "text": "About this site"
+    "text": "import polars as pl\nimport polars.selectors as cs\nimport pynsee\nfrom pynsee.download import download_file\nimport plotnine as p9\n\n\n\nurl = \"https://koumoul.com/s/data-fair/api/v1/datasets/igt-pouvoir-de-rechauffement-global/convert\"\nemissions = pl.read_csv(url, schema_overrides={'INSEE commune':pl.String()})\nsecteurs = emissions.select(cs.by_dtype(pl.Float64)).columns\nemissions = emissions.with_columns(\n    dep=pl.col('INSEE commune').str.head(2)\n)\n\n\n\nfilosofi = pl.DataFrame(download_file(\"FILOSOFI_COM_2016\"))\nfilosofi = filosofi.with_columns(\n    cs.exclude(\"CODGEO\", \"LIBGEO\").cast(pl.Float64),\n    dep=pl.col('CODGEO').str.head(2)\n)\n\n\n\ncommunes = pl.DataFrame(download_file(\"COG_COMMUNE_2022\"))\n(\n    communes \\\n        .filter(pl.col('TYPECOM') == 'COM')\n        .select('COM', 'DEP', 'REG')\n        .unique()\n        .group_by('DEP')\n        .len(name='nunique')\n        .sort('nunique', descending=True)\n)\n\n\n\nshape: (101, 2)\n\n\n\nDEP\nnunique\n\n\nstr\nu32\n\n\n\n\n\"62\"\n890\n\n\n\"02\"\n799\n\n\n\"80\"\n772\n\n\n\"57\"\n725\n\n\n\"76\"\n708\n\n\n…\n…\n\n\n\"971\"\n32\n\n\n\"974\"\n24\n\n\n\"973\"\n22\n\n\n\"976\"\n17\n\n\n\"75\"\n1\n\n\n\n\n\n\n\n# Calculer nb personnes par menage fiscal totales \nfilosofi.select(pl.sum('NBPERSMENFISC16')*1e-6)\n\n\nshape: (1, 1)\n\n\n\nNBPERSMENFISC16\n\n\nf64\n\n\n\n\n66.932242\n\n\n\n\n\n\n\n\n# Calculer les émissions totales du secteur “Résidentiel” par département\n# et rapporter la valeur au département le plus polluant dans le domaine\n# En tirer des intutitions sur la réalité que cette statistique reflèt\n\nres = (\n    emissions\n    .group_by('dep')\n    .agg(pl.sum('Résidentiel'))\n    .with_columns(\n        (pl.col(\"Résidentiel\")/pl.max('Résidentiel')).alias('Résidentiel_ind')\n    )\n    .join(\n        filosofi \\\n            .group_by('dep')\n            .agg(pl.sum('NBPERSMENFISC16'))\n            .with_columns(\n                (pl.col(\"NBPERSMENFISC16\")/pl.max('NBPERSMENFISC16')).alias('NBPERSMENFISC16_ind')\n                ), \n        on='dep'\n    )\n)\n\n\ng = (\n    p9.ggplot(res)\n    + p9.aes(x='NBPERSMENFISC16_ind', y='Résidentiel_ind', label='dep')\n    + p9.geom_point()\n    + p9.geom_text()\n    + p9.geom_abline(\n        intercept=0,\n        slope=1, \n        color='grey',\n        linetype='dotted'\n    )\n)\n\ng"
   },
   {
     "objectID": "index.html",
@@ -12,5 +12,12 @@
     "title": "quarto_test",
     "section": "",
     "text": "This is a Quarto website E.\nTo learn more about Quarto websites visit https://quarto.org/docs/websites.\n\n\n\n\n\n\n\nClassification des données de caisse à partir de machine learning\n\n\n\n\nDétail du projet\nLes données de caisse sont utilisées à l'Insee pour le calcul de l'IPC depuis 2010 (cf le document de travail sur le sujet). Les données de caisses donnent en effet pour chaque code-barres, chaque jour et chaque point de ventes les quantités vendues ainsi que le chiffre d’affaires et/ou le prix auquel le produit est vendu. Pour exploiter ces données, il est toutefois nécessaire de savoir quel produit se trouve derrière un code-barres. Actuellement, l’IPC se fonde sur un référentiel de codes-barres, acheté à un prestataire et qui donne une information très détaillée et structurée des caractéristiques de ces produits. Cette information est payante et ne couvre pas l’ensemble des produits.\nL’expérimentation vise à identifier les étapes de traitement textuel des libellés, ainsi que les méthodes de classification ou autres, permettant de coder automatiquement les libellés, sans passer par le référentiel, dans la nomenclature Coicop pour l’IPC et sur les regroupements utilisés pour Emagsa dans le cadre du projet Nosica qui vise à intégrer notamment les données de caisse dans la production des indicateurs d'activité de court-terme. Elle teste aussi leur performance sur des jeux de données tests.\n\n\nActeurs\nInsee\n\n\nRésultats du projet\nLes données de caisse sont aujourd'hui utilisées en production pour le calcul de l'inflation et pour le calcul d'indicateurs d'activité conjoncturelle.\n- note point d'étape été 2020\n- note point d'étape hiver 2020-2021\n\n\n\nCode du projet\n- https://github.com/InseeFrLab/predicat : API pour classification des libellés de caisse\n- https://github.com/InseeFrLab/product-labelling : Application de labellisation des données de caisse"
+  },
+  {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "About",
+    "section": "",
+    "text": "About this site"
   }
 ]

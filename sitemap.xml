@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://ntoulemonde.github.io/test/about.html</loc>
-    <lastmod>2025-11-06T16:41:26.757Z</lastmod>
+    <loc>https://ntoulemonde.github.io/test/manip.html</loc>
+    <lastmod>2025-11-21T10:36:46.658Z</lastmod>
   </url>
   <url>
     <loc>https://ntoulemonde.github.io/test/index.html</loc>
-    <lastmod>2025-11-06T16:41:26.757Z</lastmod>
+    <lastmod>2025-11-21T10:36:46.657Z</lastmod>
+  </url>
+  <url>
+    <loc>https://ntoulemonde.github.io/test/about.html</loc>
+    <lastmod>2025-11-21T10:36:46.657Z</lastmod>
   </url>
 </urlset>
