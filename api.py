@@ -5,17 +5,20 @@ import io
 
 # API Adresse swagger : https://www.data.gouv.fr/dataservices/api-adresse-base-adresse-nationale-ban/
 
-# to explore json
-import json
-print(json.dumps(r.json()['features'], indent=2))
-print(r.json()['features'][0].keys())
-
 # 2.4
 adresse = "88 avenue Verdier"
 postcode = ''
 url_ban_example = f'https://data.geopf.fr/geocodage/search?q={adresse}'
 
 r = requests.get(url_ban_example, {'postcode': postcode})
+
+# to explore json
+import json
+print(json.dumps(r.json()['features'], indent=2))
+print(r.json()['features'][0].keys())
+
+r.json().get('features')[0].get('properties')
+pl.DataFrame(r.json()['features']).select(['geometry', 'properties']).unnest(['properties', 'geometry'])
 localisation = r.json()['features']
 for row in localisation:
     row['properties'].update({'lon': row['geometry']['coordinates'][0], 'lat': row['geometry']['coordinates'][1]})
