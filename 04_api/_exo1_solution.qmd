@@ -3,16 +3,14 @@
 ```{python}
 #| label: exercise1-question1
 import requests
-import pandas as pd
+import polars as pl
 
 ban_root = "https://data.geopf.fr/geocodage"
 ban_search_endpoint = "search"
 api_ban_q1 = f"{ban_root}/{ban_search_endpoint}?q={adresse.replace(" ", "+")}"
 output_api_ban = requests.get(api_ban_q1).json().get('features')
 
-df_avenue_verdier = pd.DataFrame(
-    [out['properties'] for out in output_api_ban]
-)
+df_avenue_verdier = pl.DataFrame(output_api_ban).select(['properties']).unnest(['properties'])
 ```
 
 ::: {.content-visible when-profile="fr"}
@@ -44,15 +42,15 @@ output_q2 = requests.get(api_ban_q2).json()
 
 ```{python}
 #| label: exercise1-question2
-import pandas as pd
+import polars as pl
 import geopandas as gpd
 
-output_q2 = pd.DataFrame(
-    [output_q2.get("features")[0]['properties']]
-)
+output_q2 = pl.DataFrame(
+    output_q2.get("features")).select(['properties']).unnest(['properties'])
+
 output_q2 = gpd.GeoDataFrame(
-    output_q2,
-    geometry=gpd.points_from_xy(output_q2.x, output_q2.y), crs="EPSG:2154"
+    output_q2.to_pandas(),
+    geometry=gpd.points_from_xy(output_q2.get_column('x').to_pandas(), output_q2.get_column('y').to_pandas()), crs="EPSG:2154"
 ).to_crs(4326)
 output_q2
 ```
