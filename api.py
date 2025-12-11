@@ -70,14 +70,14 @@ print(json.dumps(r.json()['records'][0]['record']['fields'], indent=2))
 dep = '031'
 offset = 0
 limit = 100
-annuaire_en_url2 = f'https://data.education.gouv.fr/api/v2/catalog/datasets/fr-en-annuaire-education/records?where=code_departement=\'{dep}\'&limit={limit}&offset={offset}'
-response = requests.get(annuaire_en_url2)
+annuaire_en_url_offset = f'https://data.education.gouv.fr/api/v2/catalog/datasets/fr-en-annuaire-education/records?where=code_departement=\'{dep}\'&limit={limit}&offset={offset}'
+response = requests.get(annuaire_en_url_offset)
 nb_obs = response.json()['total_count']
-annuaire_en_df = pl.DataFrame([row['record']['fields'] for row in response.json()['records']]).cast(pl.String)  # casting all columns to string to avoid errors when concatenating df
+annuaire_en_df = pl.DataFrame(response.json()['records']).select('record').unnest('record').select('fields').unnest('fields').cast(pl.String)  # casting all columns to string to avoid errors when concatenating df
 
 while nb_obs > len(annuaire_en_df):
     offset += limit
-    annuaire_en_url2 = f'https://data.education.gouv.fr/api/v2/catalog/datasets/fr-en-annuaire-education/records?where=code_departement=\'{dep}\'&limit={limit}&offset={offset}'
+    annuaire_en_url_offset = f'https://data.education.gouv.fr/api/v2/catalog/datasets/fr-en-annuaire-education/records?where=code_departement=\'{dep}\'&limit={limit}&offset={offset}'
     print(f'fetching from {offset}th row')
     response = requests.get(annuaire_en_url2)
     annuaire_en_df = pl.concat([annuaire_en_df, pl.DataFrame([row['record']['fields'] for row in response.json()['records']], infer_schema_length=None).cast(pl.String)])
