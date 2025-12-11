@@ -61,11 +61,11 @@ requests.get(url_31_limite200).content
 
 
 ::: {.content-visible when-profile="fr"}
-Essayons avec des données plus exhaustives : le fichier brut sur `data.gouv`. Comme on peut le voir dans les métadonnées, on sait qu'on a plus de 1000 écoles dont on peut récupérer des données, mais qu'on en a ici extrait seulement 20. Le champ `next` nous donne directement l'URL à utiliser pour récupérer les 20 pages suivantes : c'est grâce à lui qu'on a une chance de récupérer toutes nos données d'intérêt.
+Essayons avec des données plus exhaustives : le fichier brut sur `data.gouv`. Comme on peut le voir dans les métadonnées, on sait qu'on a plus de 1000 écoles dont on peut récupérer des données, mais qu'on en a ici extrait seulement 20. Pour cela, on va utiliser la variable `offset`, qui permet de décaler la réponse envoyée par l'API et de récupérer à partir de la n^ième^ ligne. 
 :::
 
 ::: {.content-visible when-profile="en"}
-Let’s try using more comprehensive data: the raw file on `data.gouv`. As seen in the metadata, we know there are over 1,000 schools for which data can be retrieved, but only 20 have been extracted here. The `next` field directly provides the URL to fetch the next 20 pages: this is how we can ensure we retrieve all our data of interest.
+Let’s try using more comprehensive data: the raw file on `data.gouv`. As seen in the metadata, we know there are over 1,000 schools for which data can be retrieved, but only 20 have been extracted here. The `offset` field allows us to get data from the n^th^ row.
 :::
 
 
@@ -76,24 +76,13 @@ url_api_datagouv = "https://tabular-api.data.gouv.fr/api/resources/b22f04bf-64a8
 call_api_datagouv = requests.get(url_api_datagouv).json()
 ```
 
+
 ::: {.content-visible when-profile="fr"}
-La partie intéressante pour automatiser la récupération de nos données est la clé `links` du JSON :
+En bouclant sur la variable `offset`, on peut récupérer la totalité des données. Comme le code d'automatisation est assez fastidieux à écrire, le voici :
 :::
 
 ::: {.content-visible when-profile="en"}
-The key part for automating the retrieval of our data is the `links` key in the JSON:
-:::
-
-```{python}
-call_api_datagouv.get('links')
-```
-
-::: {.content-visible when-profile="fr"}
-En bouclant sur celui-ci pour parcourir la liste des URL accessibles, on peut récupérer des données. Comme le code d'automatisation est assez fastidieux à écrire, le voici :
-:::
-
-::: {.content-visible when-profile="en"}
-By looping over it to traverse the list of accessible URLs, we can retrieve the data. Since the automation code is rather tedious to write, here it is:
+By looping over the `offset`, we can upload the whole dataset. Since the automation code is rather tedious to write, here it is:
 :::
 
 ```{python}
@@ -149,6 +138,20 @@ The resulting _DataFrame_ is as follows:
 #| echo: true
 schools_dep31.head()
 ```
+
+
+::: {.content-visible when-profile="fr"}
+::: {.callout-note}
+On peut aussi utiliser le champ `next` renvoyé dans la requête pour obtenir les données suivantes. Ce champ est construit en incrémentant la variable `offset` selon la même logique.
+:::
+:::
+
+::: {.content-visible when-profile="en"}
+::: {.callout-note}
+We can also use the field `next` sent back by the API to directly get the link of the next call. This field is also built on `offset` increment.
+:::
+:::
+
 
 ::: {.content-visible when-profile="fr"}
 On peut fusionner ces nouvelles données avec nos données précédentes pour enrichir celles-ci. Pour faire une production fiable, il faudrait faire attention aux écoles qui ne s'apparient pas, mais ce n'est pas grave pour cette série d'exercices.
