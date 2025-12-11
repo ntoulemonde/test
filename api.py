@@ -95,9 +95,11 @@ bpe_enriched = (
 # No comma in the adresse fiedl
 bpe_enriched.with_columns(pl.col('adresse').str.contains(',').alias('virg')).filter('virg')
 
+bpe_enriched = bpe_enriched.with_columns(pl.col('adresse').str.replace(',', ' '))
+
 (
 bpe_enriched
-    .select(pl.col('adresse'), pl.col('DEPCOM'), pl.col('nom_commune'))
+    .select(['adresse', 'DEPCOM', 'nom_commune'])
     .write_csv('temp.csv')
 )
 

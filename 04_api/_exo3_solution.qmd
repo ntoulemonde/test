@@ -5,9 +5,13 @@ output_path = pathlib.Path("data/output")
 output_path.mkdir(parents=True, exist_ok=True)
 csv_file = output_path / "bpe_before_geoloc.csv"
 
-bpe_enriched["adresse"] = bpe_enriched["adresse"].str.replace(",", "")
+bpe_enriched = bpe_enriched.with_columns(pl.col('adresse').str.replace(',', ' '))
 
-bpe_enriched.loc[:, ["adresse", "DEPCOM", "Nom_commune"]].to_csv(csv_file)
+(
+bpe_enriched
+    .select(['adresse', 'DEPCOM', 'nom_commune'])
+    .write_csv(csv_file)
+)
 ```
 
 ```{python}
@@ -20,7 +24,7 @@ params = {
 }
 
 response = requests.post(
-        "https://api-adresse.data.gouv.fr/search/csv/",
+        "https://data.geopf.fr/geocodage/search/csv/",
         data=params,
         files={"data": open(csv_file, "rb")},
     )
