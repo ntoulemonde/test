@@ -18,12 +18,15 @@ print(json.dumps(r.json()['features'], indent=2))
 print(r.json()['features'][0].keys())
 
 r.json().get('features')[0].get('properties')
-pl.DataFrame(r.json()['features']).select(['geometry', 'properties']).unnest(['properties', 'geometry'])
-localisation = r.json()['features']
-for row in localisation:
-    row['properties'].update({'lon': row['geometry']['coordinates'][0], 'lat': row['geometry']['coordinates'][1]})
 
-response_df = pl.DataFrame([row['properties'] for row in localisation])
+localisation = r.json()['features']
+
+# Turning the response to a dataframe and extracting lat and lon with unnest function
+response_df = pl.DataFrame(localisation).select(['geometry', 'properties']).unnest(['properties'])
+response_df = response_df.with_columns(
+    lat=pl.col("geometry").struct['coordinates'].list.get(0),
+    lon=pl.col("geometry").struct['coordinates'].list.get(1)
+).drop('geometry')
 response_df
 
 import folium
