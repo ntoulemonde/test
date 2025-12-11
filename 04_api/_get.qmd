@@ -37,7 +37,7 @@ WHERE DEP = '31'
 """
 
 bpe = duckdb.sql(query)
-bpe = bpe.to_df()
+bpe = pl.from_pandas(bpe.to_df())
 ```
 
 ::: {.content-visible when-profile="fr"}
