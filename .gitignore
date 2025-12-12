@@ -2,3 +2,6 @@
 /_site/
 **/*.quarto_ipynb
 _freeze/
+
+*.html
+*.csv

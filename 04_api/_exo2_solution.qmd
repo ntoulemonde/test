@@ -1,0 +1,167 @@
+::: {.content-visible when-profile="fr"}
+La première question nous permet de récupérer un premier jeu de données
+:::
+
+::: {.content-visible when-profile="en"}
+The first question allows us to retrieve an initial dataset.
+:::
+
+```{python}
+#| label: exercise2-api-education-q1
+import requests
+
+url_annuaire_education = "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-annuaire-education/records"
+
+school_q1_exo2 = pl.DataFrame(
+  requests
+  .get(url_annuaire_education)
+  .json()
+  .get("results")
+)
+
+school_q1_exo2.head(2)
+```
+
+::: {.content-visible when-profile="fr"}
+Néanmoins, on a deux problèmes : il n'y a que 10 observations et elles couvrent toute la France et pas juste notre département d'intérêt. Essayons déjà avec la question 2 de changer ce dernier.
+:::
+
+::: {.content-visible when-profile="en"}
+However, there are two issues: there are only 10 rows and the datasets covers the whole French territory when we want to restrict to our  department of interest. Let’s first address the latter with question 2.
+:::
+
+```{python}
+#| label: exercise2-api-education-q2
+url_31_limite10 = "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-annuaire-education/records?where=code_departement%20like%20%22031%22"
+
+response_json = requests.get(url_31_limite10).json()
+
+school_q2_exo2 = pl.DataFrame(response_json.get("results"))
+school_q2_exo2.head()
+```
+
+::: {.content-visible when-profile="fr"}
+C'est mieux, mais nous avons toujours seulement `{python} len(school_q2_exo2)` observations. Si on essaie d'ajuster le nombre de lignes (question 3), on obtient le retour suivant de l'API :
+:::
+
+::: {.content-visible when-profile="en"}
+This is better, but we still only have `{python} len(school_q2_exo2)` observations. If we try to adjust the number of rows (question 3), we get the following response from the API:
+:::
+
+
+
+```{python}
+url_31_limite200 = "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-annuaire-education/records?where=code_departement%20like%20%22031%22&limit=200"
+
+requests.get(url_31_limite200).content
+```
+
+
+::: {.content-visible when-profile="fr"}
+En regardant les métadonnées de la réponse envoyée par l'API, on voit qu'il existe une variable `total_count` qui permet de donner la taille totale du dataset (`{python} response_json.get('total_count')` lignes en l'occurence).  Pour extraire toutes les données, on va utiliser la variable `offset`, qui permet de décaler la réponse envoyée par l'API et de récupérer à partir de la n^ième^ ligne. Comme le code d'automatisation est assez fastidieux à écrire, le voici :
+:::
+
+::: {.content-visible when-profile="en"}
+By looking at the data metadata, we notice that a variable `total_count` gives us the dataset size (`{python} response_json.get('total_count')` rows in our case). We will use the `offset` field to get data from the n^th^ row and download the whole dataset. Since the automation code is rather tedious to write, here it is:
+:::
+
+```{python}
+#| echo: true
+#| output: false
+#| label: exercise2-fetch-all
+import requests
+import polars as pl
+
+# Initialize the initial API URL
+dep = '031'
+offset = 0
+limit = 100
+url_api_datagouv = f'https://data.education.gouv.fr/api/v2/catalog/datasets/fr-en-annuaire-education/records?where=code_departement=\'{dep}\'&limit={limit}&offset={offset}'
+
+# First request to get total obs and first df
+response = requests.get(url_api_datagouv)
+nb_obs = response.json()['total_count']
+schools_dep31 = pl.DataFrame(response.json()['records']).select('record').unnest('record').select('fields').unnest('fields').cast(pl.String)  # casting all columns to string to avoid errors when concatenating df
+
+# Loop on the nb of obs
+while nb_obs > len(schools_dep31):
+    try:
+      # Increase offset for first reply sent and update API url
+      offset += limit
+      url_api_datagouv = f'https://data.education.gouv.fr/api/v2/catalog/datasets/fr-en-annuaire-education/records?where=code_departement=\'{dep}\'&limit={limit}&offset={offset}'
+
+      # Call API
+      print(f'fetching from {offset}th row')
+      response = requests.get(url_api_datagouv)
+      
+      # Concatenate the data from this call to previous data
+      page_data = pl.DataFrame(response.json()['records']).select('record').unnest('record').select('fields').unnest('fields').cast(pl.String)
+      schools_dep31 = pl.concat([schools_dep31, page_data])
+      print(f'length of data is now {len(schools_dep31)}')
+
+    except requests.exceptions.RequestException as e:
+      print(f"An error occurred: {e}")
+      break
+
+```
+
+::: {.content-visible when-profile="fr"}
+Le _DataFrame_ obtenu est le suivant:
+:::
+
+::: {.content-visible when-profile="en"}
+The resulting _DataFrame_ is as follows:
+:::
+
+
+```{python}
+#| echo: true
+schools_dep31.head()
+```
+
+
+::: {.content-visible when-profile="fr"}
+::: {.callout-note}
+On peut aussi utiliser le champ `next` renvoyé dans la requête pour obtenir les données suivantes. Ce champ est construit en incrémentant la variable `offset` selon la même logique.
+:::
+:::
+
+::: {.content-visible when-profile="en"}
+::: {.callout-note}
+We can also use the field `next` sent back by the API to directly get the link of the next call. This field is also built on `offset` increment.
+:::
+:::
+
+
+::: {.content-visible when-profile="fr"}
+On peut fusionner ces nouvelles données avec nos données précédentes pour enrichir celles-ci. Pour faire une production fiable, il faudrait faire attention aux écoles qui ne s'apparient pas, mais ce n'est pas grave pour cette série d'exercices.
+:::
+
+::: {.content-visible when-profile="en"}
+We can merge this new data with our previous dataset to enrich it. For reliable production, care should be taken with schools that do not match, but this is not critical for this series of exercises.
+:::
+
+
+```{python}
+#| echo: true
+#| label: exercise2-bpe-enriched
+
+bpe_enriched = (
+    schools_dep31
+        .select(pl.col('code_commune'), pl.col('nom_commune'), pl.col('nom_etablissement'), pl.col('latitude'), pl.col('longitude'), pl.col('siren_siret'))
+        .join(bpe, left_on='siren_siret', right_on='SIRET', how='right')
+        .with_columns(
+            pl.col('adresse').str.strip_chars() 
+        )
+)
+
+bpe_enriched.head(2)
+```
+
+::: {.content-visible when-profile="fr"}
+Cela nous donne des données enrichies de nouvelles caractéristiques sur les établissements. Il y a des coordonnées géographiques dans celles-ci, mais nous allons faire comme s'il n'y en avait pas pour réutiliser notre API de géolocalisation.
+:::
+
+::: {.content-visible when-profile="en"}
+This provides us with data enriched with new characteristics about the institutions. Although there are geographic coordinates in the dataset, we will pretend there aren't to reuse our geolocation API.
+:::
