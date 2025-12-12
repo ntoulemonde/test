@@ -23,32 +23,29 @@ school_q1_exo2.head(2)
 ```
 
 ::: {.content-visible when-profile="fr"}
-Néanmoins, on a deux problèmes : le nombre de lignes et le département d'intérêt. Essayons déjà avec la question 2 de changer ce dernier.
+Néanmoins, on a deux problèmes : il n'y a que 10 observations et elles couvrent toute la France et pas juste notre département d'intérêt. Essayons déjà avec la question 2 de changer ce dernier.
 :::
 
 ::: {.content-visible when-profile="en"}
-However, there are two issues: the number of rows and the department of interest. Let’s first address the latter with question 2.
+However, there are two issues: there are only 10 rows and the datasets covers the whole French territory when we want to restrict to our  department of interest. Let’s first address the latter with question 2.
 :::
 
 ```{python}
 #| label: exercise2-api-education-q2
 url_31_limite10 = "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-annuaire-education/records?where=code_departement%20like%20%22031%22"
 
-school_q2_exo2 = pl.DataFrame(
-  requests
-  .get(url_31_limite10)
-  .json()
-  .get("results")
-)
+response_json = requests.get(url_31_limite10).json()
+
+school_q2_exo2 = pl.DataFrame(response_json.get("results"))
 school_q2_exo2.head()
 ```
 
 ::: {.content-visible when-profile="fr"}
-C'est mieux, mais nous avons toujours seulement 10 observations. Si on essaie d'ajuster le nombre de lignes (question 3), on obtient le retour suivant de l'API :
+C'est mieux, mais nous avons toujours seulement `{python} len(school_q2_exo2)` observations. Si on essaie d'ajuster le nombre de lignes (question 3), on obtient le retour suivant de l'API :
 :::
 
 ::: {.content-visible when-profile="en"}
-This is better, but we still only have 10 observations. If we try to adjust the number of rows (question 3), we get the following response from the API:
+This is better, but we still only have `{python} len(school_q2_exo2)` observations. If we try to adjust the number of rows (question 3), we get the following response from the API:
 :::
 
 
@@ -61,34 +58,17 @@ requests.get(url_31_limite200).content
 
 
 ::: {.content-visible when-profile="fr"}
-Essayons avec des données plus exhaustives : le fichier brut sur `data.gouv`. Comme on peut le voir dans les métadonnées, on sait qu'on a plus de 1000 écoles dont on peut récupérer des données, mais qu'on en a ici extrait seulement 20. Pour cela, on va utiliser la variable `offset`, qui permet de décaler la réponse envoyée par l'API et de récupérer à partir de la n^ième^ ligne. 
+En regardant les métadonnées de la réponse envoyée par l'API, on voit qu'il existe une variable `total_count` qui permet de donner la taille totale du dataset (`{python} response_json.get('total_count')` lignes en l'occurence).  Pour extraire toutes les données, on va utiliser la variable `offset`, qui permet de décaler la réponse envoyée par l'API et de récupérer à partir de la n^ième^ ligne. Comme le code d'automatisation est assez fastidieux à écrire, le voici :
 :::
 
 ::: {.content-visible when-profile="en"}
-Let’s try using more comprehensive data: the raw file on `data.gouv`. As seen in the metadata, we know there are over 1,000 schools for which data can be retrieved, but only 20 have been extracted here. The `offset` field allows us to get data from the n^th^ row.
-:::
-
-
-```{python}
-#| label: exercise2-api-datagouv
-url_api_datagouv = "https://tabular-api.data.gouv.fr/api/resources/b22f04bf-64a8-495d-b8bb-d84dbc4c7983/data/?Code_departement__exact=031"
-
-call_api_datagouv = requests.get(url_api_datagouv).json()
-```
-
-
-::: {.content-visible when-profile="fr"}
-En bouclant sur la variable `offset`, on peut récupérer la totalité des données. Comme le code d'automatisation est assez fastidieux à écrire, le voici :
-:::
-
-::: {.content-visible when-profile="en"}
-By looping over the `offset`, we can upload the whole dataset. Since the automation code is rather tedious to write, here it is:
+By looking at the data metadata, we notice that a variable `total_count` gives us the dataset size (`{python} response_json.get('total_count')` rows in our case). We will use the `offset` field to get data from the n^th^ row and download the whole dataset. Since the automation code is rather tedious to write, here it is:
 :::
 
 ```{python}
 #| echo: true
 #| output: false
-#| label: exercise2-api-tabular
+#| label: exercise2-fetch-all
 import requests
 import polars as pl
 

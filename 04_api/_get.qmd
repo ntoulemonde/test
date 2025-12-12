@@ -38,6 +38,7 @@ WHERE DEP = '31'
 
 bpe = duckdb.sql(query)
 bpe = pl.from_pandas(bpe.to_df())
+bpe = bpe.filter(pl.col('TYPEQU').str.starts_with('C'))
 ```
 
 ::: {.content-visible when-profile="fr"}

@@ -3,7 +3,7 @@
 ::: {.callout-tip}
 ## Exercice 2
 
-1. Visiter le _swagger_ de l'API de l'Annuaire de l'Education nationale sur [api.gouv.fr/documentation](https://api.gouv.fr/documentation/api-annuaire-education) et tester une première récupération de données en utilisant le _endpoint_ `records` sans aucun paramètre.
+1. Visiter le _swagger_ de l'API de l'Annuaire de l'Education nationale sur [api.gouv.fr/documentation](https://www.data.gouv.fr/dataservices/annuaire-de-leducation-nationale/) et tester une première récupération de données en utilisant le _endpoint_ `records` sans aucun paramètre.
 2. Puisqu'on n'a conservé que les données de la Haute Garonne dans notre base principale, on désire ne récupérer que les établissements de ce département par le biais de notre API. Faire une requête avec le paramètre _ad hoc_, sans en ajouter d'autres.
 3. Augmenter la limite du nombre de paramètres, voyez-vous le problème ?
 4. On va tenter de récupérer ces données par le biais de l'API tabular de `data.gouv`. Sa documentation est [ici](https://tabular-api.data.gouv.fr/api/doc) et l'identifiant de la ressource est `b22f04bf-64a8-495d-b8bb-d84dbc4c7983` ([source](https://www.data.gouv.fr/fr/datasets/annuaire-de-leducation/)). Avec l'aide de la documentation, essayer de récupérer des données par le biais de cette API en utilisant le paramètre `Code_departement__exact=031` pour ne garder que le département d'intérêt.

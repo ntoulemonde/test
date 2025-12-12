@@ -43,7 +43,9 @@ def generate_map(lon, lat, zoom_start=15):
 
 generate_map(lon=response_df[0,'lon'], lat=response_df[0,'lat'])
 
-# 3.1
+# 3.1 - _get.qmd
+#| echo: true
+#| label: read-bpe-parquet
 import duckdb
 
 query = """
@@ -57,9 +59,12 @@ WHERE DEP = '31'
 
 bpe = duckdb.sql(query)
 bpe = pl.from_pandas(bpe.to_df())
-bpe = bpe.filter(pl.col('TYPEQU').str.starts_with('C'))
+bpe.glimpse()  # Contains other equipment as mairies, etc. Need to filter to C
 
-# 3.2
+bpe = bpe.filter(pl.col('TYPEQU').str.starts_with('C'))
+bpe.glimpse()  # Now only ~1k equipments
+
+# 3.2 - _exo2_solution
 # API Education nationale https://www.data.gouv.fr/dataservices/annuaire-de-leducation-nationale/ 
 siren_siret = '21310001900024'
 annuaire_en_url = f'https://data.education.gouv.fr/api/v2/catalog/datasets/fr-en-annuaire-education/records?where=siren_siret%3D%27{siren_siret}%27'
@@ -67,24 +72,48 @@ annuaire_en_url = f'https://data.education.gouv.fr/api/v2/catalog/datasets/fr-en
 r = requests.get(annuaire_en_url)
 print(json.dumps(r.json()['records'][0]['record']['fields'], indent=2))
 
+#| echo: true
+#| output: false
+#| label: exercise2-api-tabular
+import requests
+import polars as pl
+
+# Initialize the initial API URL
 dep = '031'
 offset = 0
 limit = 100
-annuaire_en_url_offset = f'https://data.education.gouv.fr/api/v2/catalog/datasets/fr-en-annuaire-education/records?where=code_departement=\'{dep}\'&limit={limit}&offset={offset}'
-response = requests.get(annuaire_en_url_offset)
-nb_obs = response.json()['total_count']
-annuaire_en_df = pl.DataFrame(response.json()['records']).select('record').unnest('record').select('fields').unnest('fields').cast(pl.String)  # casting all columns to string to avoid errors when concatenating df
+url_api_datagouv = f'https://data.education.gouv.fr/api/v2/catalog/datasets/fr-en-annuaire-education/records?where=code_departement=\'{dep}\'&limit={limit}&offset={offset}'
 
-while nb_obs > len(annuaire_en_df):
-    offset += limit
-    annuaire_en_url_offset = f'https://data.education.gouv.fr/api/v2/catalog/datasets/fr-en-annuaire-education/records?where=code_departement=\'{dep}\'&limit={limit}&offset={offset}'
-    print(f'fetching from {offset}th row')
-    response = requests.get(annuaire_en_url2)
-    annuaire_en_df = pl.concat([annuaire_en_df, pl.DataFrame([row['record']['fields'] for row in response.json()['records']], infer_schema_length=None).cast(pl.String)])
-    print(f'length of data is now {len(annuaire_en_df)}')
+# First request to get total obs and first df
+response = requests.get(url_api_datagouv)
+nb_obs = response.json()['total_count']
+schools_dep31 = pl.DataFrame(response.json()['records']).select('record').unnest('record').select('fields').unnest('fields').cast(pl.String)  # casting all columns to string to avoid errors when concatenating df
+
+# Loop on the nb of obs
+while nb_obs > len(schools_dep31):
+    try:
+      # Increase offset for first reply sent and update API url
+      offset += limit
+      url_api_datagouv = f'https://data.education.gouv.fr/api/v2/catalog/datasets/fr-en-annuaire-education/records?where=code_departement=\'{dep}\'&limit={limit}&offset={offset}'
+
+      # Call API
+      print(f'fetching from {offset}th row')
+      response = requests.get(url_api_datagouv)
+      
+      # Concatenate the data from this call to previous data
+      page_data = pl.DataFrame(response.json()['records']).select('record').unnest('record').select('fields').unnest('fields').cast(pl.String)
+      schools_dep31 = pl.concat([schools_dep31, page_data])
+      print(f'length of data is now {len(schools_dep31)}')
+
+    except requests.exceptions.RequestException as e:
+      print(f"An error occurred: {e}")
+      break
+
+#| echo: true
+#| label: exercise2-bpe-enriched
 
 bpe_enriched = (
-    annuaire_en_df
+    schools_dep31
         .select(pl.col('code_commune'), pl.col('nom_commune'), pl.col('nom_etablissement'), pl.col('latitude'), pl.col('longitude'), pl.col('siren_siret'))
         .join(bpe, left_on='siren_siret', right_on='SIRET', how='right')
         .with_columns(
@@ -92,18 +121,29 @@ bpe_enriched = (
         )
 )
 
+bpe_enriched.head(2).glimpse()
+
 # No comma in the adresse fiedl
 bpe_enriched.with_columns(pl.col('adresse').str.contains(',').alias('virg')).filter('virg')
+
+bpe_enriched = bpe_enriched.with_columns(pl.col('adresse').str.replace(',', ' '))
+
+# Ex 3 solution
+#| label: exercise3-q1
+import pathlib
+output_path = pathlib.Path("data/output")
+output_path.mkdir(parents=True, exist_ok=True)
+csv_file = output_path / "bpe_before_geoloc.csv"
 
 bpe_enriched = bpe_enriched.with_columns(pl.col('adresse').str.replace(',', ' '))
 
 (
 bpe_enriched
     .select(['adresse', 'DEPCOM', 'nom_commune'])
-    .write_csv('temp.csv')
+    .write_csv(csv_file)
 )
 
-
+import io
 
 headers = {
     'accept': 'text/csv',
@@ -112,11 +152,16 @@ headers = {
 files = [
     ('indexes', (None, 'address')),
     ('indexes', (None, 'poi')),
-    ('data', ('temp.csv', open('temp.csv', 'rb'), 'text/csv')),
+    ('data', (str(csv_file), open(csv_file, 'rb'), 'text/csv')),
     ('citycode', (None, 'DEPCOM')),
     ('columns', (None, 'adresse'))
 ]
 
-response = requests.post('https://data.geopf.fr/geocodage/search/csv', headers=headers, files=files)
+response = requests.post(
+        "https://data.geopf.fr/geocodage/search/csv/",
+        headers=headers,
+        files=files
+    )
+
 bpe_loc = pl.read_csv(io.StringIO(response.text))
 

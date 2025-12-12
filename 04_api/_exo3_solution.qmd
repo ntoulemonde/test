@@ -17,21 +17,26 @@ bpe_enriched
 ```{python}
 import io
 
-params = {
-    "columns": ["adresse", "Nom_commune"],
-    "citycode": "DEPCOM",
-    "result_columns": ["result_score", "latitude", "longitude"],
+headers = {
+    'accept': 'text/csv',
 }
+
+files = [
+    ('indexes', (None, 'address')),
+    ('indexes', (None, 'poi')),
+    ('data', (str(csv_file), open(csv_file, 'rb'), 'text/csv')),
+    ('citycode', (None, 'DEPCOM')),
+    ('columns', (None, 'adresse'))
+]
 
 response = requests.post(
         "https://data.geopf.fr/geocodage/search/csv/",
-        data=params,
-        files={"data": open(csv_file, "rb")},
+        headers=headers,
+        files=files
     )
 
+bpe_loc = pl.read_csv(io.StringIO(response.text))
 
-bpe_loc = pd.read_csv(io.StringIO(response.text))
-bpe_loc = bpe_loc.rename({"Unnamed: 0": "index"}, axis = "columns")
 ```
 
 ::: {.content-visible when-profile="fr"}
@@ -56,12 +61,11 @@ By enriching the previous data, this gives:
 
 ```{python}
 #| label: exercise3-q2
-bpe_loc = bpe_loc.loc[:, ["index", "result_score", "latitude", "longitude"]]
+bpe_loc = bpe_loc.select(['adresse', 'DEPCOM', 'nom_commune', 'result_score', 'latitude', 'longitude']).cast(pl.String)
 bpe_enriched_geocoded = (
   bpe_enriched
-  .reset_index()
-  .merge(bpe_loc, on = "index", suffixes = ["_annuaire", "_ban"])
-  .drop("index", axis = "columns")
+  .join(bpe_loc, on = ['DEPCOM','adresse', 'nom_commune'], suffix = "_ban")
+  .cast({"latitude": pl.Float64, "latitude_ban": pl.Float64, "longitude": pl.Float64, "longitude_ban": pl.Float64})
 )
 
 bpe_enriched_geocoded.head(2)
@@ -76,13 +80,11 @@ We can check that the geolocation is not too off by comparing it with the longit
 :::
 
 ```{python}
-pd.concat(
-  [
-    bpe_enriched_geocoded.loc[:, ["NOMRS", "Nom_commune"]],
-    bpe_enriched_geocoded.filter(like = "longitude"),
-    bpe_enriched_geocoded.filter(like = "latitude")
-  ], axis = 1
-).sample(5)
+(
+    bpe_enriched_geocoded
+    .select(["NOMRS", "nom_commune", "latitude", "latitude_ban", "longitude", "longitude_ban"])
+    .sample(5)
+)
 ```
 
 ::: {.content-visible when-profile="fr"}
@@ -95,10 +97,10 @@ Without going into detail, the positions seem very similar, with only minor inac
 
 ```{python}
 #| label: exercise3-q3
-bpe_enriched_geocoded = bpe_enriched_geocoded.dropna(subset=["longitude_ban","latitude_ban"])
+bpe_enriched_geocoded = bpe_enriched_geocoded.drop_nulls(subset=["longitude_ban","latitude_ban"])
 
 bpe_enriched_geocoded = gpd.GeoDataFrame(
-    bpe_enriched_geocoded,
+    bpe_enriched_geocoded.to_pandas(),
     geometry=gpd.points_from_xy(
       bpe_enriched_geocoded['longitude_ban'],
       bpe_enriched_geocoded['latitude_ban']
