@@ -1,7 +1,7 @@
 import duckdb
 
 
-def my_connect(path_file, df_name, requete):
+def my_connect(requete, path_file = 'https://static.data.gouv.fr/resources/recensement-de-la-population-fichiers-detail-individus-localises-au-canton-ou-ville-2020-1/20231023-122841/fd-indcvi-2020.parquet', df_name='rp2020'):
     '''
     Function to create a view from a path and have a SQL requete on it
     
@@ -21,8 +21,6 @@ def my_connect(path_file, df_name, requete):
 
 # Exo1
 my_connect(
-    path_file='https://static.data.gouv.fr/resources/recensement-de-la-population-fichiers-detail-individus-localises-au-canton-ou-ville-2020-1/20231023-122841/fd-indcvi-2020.parquet', 
-    df_name='rp2020',
     requete="""
     SELECT
         AGEREV,
@@ -52,8 +50,6 @@ my_connect(
 --  Visualliser les 10 premières lignes
 """
 my_connect(
-    path_file='https://static.data.gouv.fr/resources/recensement-de-la-population-fichiers-detail-individus-localises-au-canton-ou-ville-2020-1/20231023-122841/fd-indcvi-2020.parquet', 
-    df_name='rp2020',
     requete="""
     SELECT
         LPAD(REGION, 2, '0') AS REGION,
@@ -77,96 +73,128 @@ my_connect(
 )
 
 
+# Exercice 3
 """
--- Exercice 3
 -- On souhaite afficher la population des cinq départements du Grand Est (REGION 44) les plus peuplés, classés du plus grand au plus petit. (IPONDI = variable de pondération)
 -- On pourra arrondir la population avec la fonction ROUND
 """
 
+my_connect(
+    requete="""
+    SELECT
+        DEPT,
+        ROUND(SUM(IPONDI))::INT AS POP
+    FROM
+        rp2020
+    WHERE
+        REGION = '44'
+    GROUP BY
+        DEPT
+    ORDER BY
+        POP DESC
+    LIMIT 5;
+    """
+)
 
+# Exercice 4
 """
--- Exercice 4
 -- Reprendre le script de l'exercice 2 (Population par département du Grand Est)
 -- Ajouter le nom des départements à l'aide d'une jointure avec la table cog_dep
 -- Limiter l'affichage aux départements de moins de 300 000 habitants.
-CREATE OR REPLACE
-VIEW cog_dep AS
-FROM
-'https://www.insee.fr/fr/statistiques/fichier/7766585/v_departement_2024.csv';
+"""
+my_connect(
+    requete=
+    """
+    CREATE OR REPLACE
+    VIEW cog_dep AS
+    FROM
+    'https://www.insee.fr/fr/statistiques/fichier/7766585/v_departement_2024.csv';
 
+    SELECT
+        REG AS REGION,
+        DEPT,
+        LIBELLE,
+        POP AS POP2013,
+    FROM
+        (
+        SELECT
+            DEPT,
+            ROUND(SUM(IPONDI)) AS POP
+        FROM
+            rp2020
+        WHERE
+            REGION = '44'
+        GROUP BY
+            DEPT) AS A
+    LEFT JOIN cog_dep ON
+        A.DEPT = cog_dep.DEP
+    WHERE
+        POP2013 <= 300000;
+    """
+)
 
-SELECT
-	*
-FROM
-	cog_dep
+# Equivalent à 
+my_connect(
+    requete=
+    """
+    CREATE OR REPLACE
+    VIEW cog_dep AS
+    FROM
+    'https://www.insee.fr/fr/statistiques/fichier/7766585/v_departement_2024.csv';
 
-SELECT
-	REG AS REGION,
-	DEPT,
-	LIBELLE,
-	POP AS POP2013,
-FROM
-	(
-	SELECT
-		DEPT,
-		ROUND(SUM(IPONDI)) AS POP
-	FROM
-		rp2020
-	WHERE
-		REGION = '44'
-	GROUP BY
-		DEPT) AS A
-LEFT JOIN cog_dep ON
-	A.DEPT = cog_dep.DEP
-WHERE
-	POP2013 <= 300000;
--- Equivalent à 
-WITH A AS (
-SELECT
-	DEPT,
-	ROUND(SUM(IPONDI)) AS POP
-FROM
-	rp2020
-WHERE
-	REGION = '44'
-GROUP BY
-	DEPT)
-SELECT
-	REG AS REGION,
-	DEPT,
-	LIBELLE,
-	POP AS POP2013,
-FROM
-	A
-LEFT JOIN cog_dep ON
-	A.DEPT = cog_dep.DEP
-WHERE
-	POP2013 <= 300000;
--- POP2013 c'est pas 2013 l'année ? 
--- Exercice 5
+    WITH A AS (
+    SELECT
+        DEPT,
+        ROUND(SUM(IPONDI)) AS POP
+    FROM
+        rp2020
+    WHERE
+        REGION = '44'
+    GROUP BY
+        DEPT)
+    SELECT
+        REG AS REGION,
+        DEPT,
+        LIBELLE,
+        POP AS POP2013,
+    FROM
+        A
+    LEFT JOIN cog_dep ON
+        A.DEPT = cog_dep.DEP
+    WHERE
+        POP2013 <= 300000;
+    """
+)
+
+# Exercice 5
+"""
 -- Créer la vue pct_cog pointant vers la liste des cantons et des pseudo-cantons issue du code officiel géographique. 
 -- En réalisant une jointure entre la table rp2020 et pct_cog, afficher la liste des codes des cantons et pseudos cantons de la table rp2020 n'ayant aucune correspondance avec la table pct_cog.
-CREATE OR REPLACE
-VIEW pct_cog AS
-FROM
-'https://www.insee.fr/fr/statistiques/fichier/7766585/v_canton_2024.csv';
+"""
+my_connect(
+    requete=
+    """
+    CREATE OR REPLACE
+    VIEW pct_cog AS
+    FROM
+    'https://www.insee.fr/fr/statistiques/fichier/7766585/v_canton_2024.csv';
 
-SELECT
-	*
-FROM
-	pct_cog
+    SELECT
+        DISTINCT
+        -- to remove duplicates
+        CANTVILLE
+    FROM
+        rp2020
+    LEFT OUTER JOIN pct_cog ON
+        rp2020.CANTVILLE = pct_cog.CAN
+    WHERE
+        pct_cog.CAN IS NULL;
+    """
+)
 
-SELECT
-	DISTINCT
-	-- to remove duplicates
-	CANTVILLE
-FROM
-	rp2020
-LEFT OUTER JOIN pct_cog ON
-	rp2020.CANTVILLE = pct_cog.CAN
-WHERE
-	pct_cog.CAN IS NULL;
--- Exercice 6
+
+# Exercice 6
+"""
 -- Afficher la liste des départements ayant au moins un habitant né avant 1897.
 -- À l'aide d'une jointure ajouter le libellé des départements.
 -- On pourra créer la vue cog_dep pointant vers la liste des départements . 
