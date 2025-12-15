@@ -1,7 +1,7 @@
 import duckdb
 
 
-def my_connect(requete, path_file = 'https://static.data.gouv.fr/resources/recensement-de-la-population-fichiers-detail-individus-localises-au-canton-ou-ville-2020-1/20231023-122841/fd-indcvi-2020.parquet', df_name='rp2020'):
+def my_connect(requete, path_file='https://static.data.gouv.fr/resources/recensement-de-la-population-fichiers-detail-individus-localises-au-canton-ou-ville-2020-1/20231023-122841/fd-indcvi-2020.parquet', df_name='rp2020'):
     '''
     Function to create a view from a path and have a SQL requete on it
     
