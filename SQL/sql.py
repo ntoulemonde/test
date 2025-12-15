@@ -197,68 +197,73 @@ my_connect(
 """
 -- Afficher la liste des départements ayant au moins un habitant né avant 1897.
 -- À l'aide d'une jointure ajouter le libellé des départements.
--- On pourra créer la vue cog_dep pointant vers la liste des départements . 
-CREATE OR REPLACE
-VIEW cog_dep AS
-FROM
-'https://www.insee.fr/fr/statistiques/fichier/7766585/v_departement_2024.csv';
-
-WITH rp2020_temp AS (
-SELECT
-	DEPT
-FROM
-	rp2020
-WHERE
-	ANAI <= 1897
-GROUP BY
-	DEPT
-HAVING
-	ROUND(SUM(IPONDI)) >= 1
-)
-SELECT
-	DISTINCT
-  DEPT,
-	LIBELLE,
-FROM
-	rp2020_temp
-LEFT JOIN cog_dep ON
-	rp2020_temp.DEPT = cog_dep.DEP
-ORDER BY
-	DEPT ;
-
-
--- Exercice 7
-CREATE TABLE Stargate (
-  prenom VARCHAR(50), 
-  nom VARCHAR(50), 
-  annee_naissance INT, 
-  lieu_naissance VARCHAR(50), 
-  pays VARCHAR(50),
-  );
-
-INSERT INTO Stargate(prenom, nom, annee_naissance, lieu_naissance, pays)
-VALUES 
-  ('Michael', 'SHANKS', '1970', 'Vancouver', 'Canada'),
-  ('Amanda', 'TAPPING', '1965', 'Rochford', 'Royaume-Uni'),
-  ('Teryl', 'ROTHERY', '1962', 'Vancouver', 'Canada'),
-  ('Christopher', 'JUDGE', '1964', 'Los Angeles', 'Etats-Unis');
-
-SELECT *
-FROM
-  Stargate;
-
-INSERT INTO Stargate(prenom, nom, annee_naissance, lieu_naissance, pays)
-VALUES 
-  ('Richard Dean', 'ANDERSON', '1950', 'Minneapolis', 'Etats-Unis');
-
--- Ajout de l'age
-ALTER TABLE Stargate 
-ADD age INT;
-
-UPDATE Stargate
-SET age = 2025-annee_naissance;
-
-SELECT *
-FROM
-  Stargate;
+-- On pourra créer la vue cog_dep pointant vers la liste des départements
 """
+my_connect(
+    requete=
+    """
+    CREATE OR REPLACE
+    VIEW cog_dep AS
+    FROM
+    'https://www.insee.fr/fr/statistiques/fichier/7766585/v_departement_2024.csv';
+
+    WITH rp2020_temp AS (
+    SELECT
+        DEPT
+    FROM
+        rp2020
+    WHERE
+        ANAI <= 1897
+    GROUP BY
+        DEPT
+    HAVING
+        ROUND(SUM(IPONDI)) >= 1
+    )
+    SELECT
+        DISTINCT
+    DEPT,
+        LIBELLE,
+    FROM
+        rp2020_temp
+    LEFT JOIN cog_dep ON
+        rp2020_temp.DEPT = cog_dep.DEP
+    ORDER BY
+        DEPT ;
+    """
+)
+
+# Exercice 7
+con.execute(
+    """
+    CREATE OR REPLACE TABLE Stargate (
+    prenom VARCHAR(50), 
+    nom VARCHAR(50), 
+    annee_naissance INT, 
+    lieu_naissance VARCHAR(50), 
+    pays VARCHAR(50),
+    );
+
+    INSERT INTO Stargate(prenom, nom, annee_naissance, lieu_naissance, pays)
+    VALUES 
+    ('Michael', 'SHANKS', '1970', 'Vancouver', 'Canada'),
+    ('Amanda', 'TAPPING', '1965', 'Rochford', 'Royaume-Uni'),
+    ('Teryl', 'ROTHERY', '1962', 'Vancouver', 'Canada'),
+    ('Christopher', 'JUDGE', '1964', 'Los Angeles', 'Etats-Unis');
+
+    INSERT INTO Stargate(prenom, nom, annee_naissance, lieu_naissance, pays)
+    VALUES 
+    ('Richard Dean', 'ANDERSON', '1950', 'Minneapolis', 'Etats-Unis');
+
+    -- Ajout de l'age
+    ALTER TABLE Stargate 
+    ADD age INT;
+
+    UPDATE Stargate
+    SET age = 2025-annee_naissance;
+
+    SELECT *
+    FROM
+        Stargate
+    """
+).fetchdf()
+
