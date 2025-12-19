@@ -1,8 +1,8 @@
 import copy
 import solutions
 
-def initialize_grid():
-    empty_list = [[' '] * 7 for _ in range(6)]
+def initialize_grid(n_rows=6, n_columns=7):
+    empty_list = [[' '] * n_columns for _ in range(n_rows)]
     return empty_list
 
 grid_solution = initialize_grid()
