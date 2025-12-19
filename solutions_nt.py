@@ -1,4 +1,6 @@
-import copy
+# Cf https://inseefrlab.github.io/formation-python-initiation/source/projects/puissance4/tutorial.html
+
+import copy 
 import solutions
 
 def initialize_grid(n_rows=6, n_columns=7):
